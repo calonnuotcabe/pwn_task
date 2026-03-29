@@ -1,3 +1,2 @@
-# DreamHack
-## EHC_task
-### GOAT kasero:DDD
+EHC_Task
+kasero is my GOAT:DDD
